@@ -210,10 +210,6 @@ void BSP_ADC_Init(void)
     ADC1->CR |= ADC_CR_ADEN;
     while(!(ADC1->ISR & ADC_ISR_ADRDY));
 
-    // --- CHANGEMENTS ICI ---
-    // On NE met PAS le bit CONT (Mode continu désactivé)
-    // On NE sélectionne PAS les canaux ici (ADC1->CHSELR = 0 pour l'instant)
-    // On augmente le temps d'échantillonnage pour éviter que la charge du pot 1 bave sur le pot 2
     ADC1->SMPR = 0x07; // Maximum sampling time (ex: 239.5 cycles) pour éviter le crosstalk
 }
 
@@ -258,4 +254,5 @@ void BSP_ADC_Init(void)
 //	// Start conversion
 //	ADC1->CR |= ADC_CR_ADSTART;
 //}
+
 
