@@ -40,7 +40,7 @@ int main(void)
     SystemClock_Config();
     servo_uart_init();
     BSP_Console_Init();
-    BSP_ADC_DMA_Init(); // Ton init DMA "Style Prof"
+    BSP_ADC_DMA_Init(); 
 
     // Allumage initial
     herkulex_torque_on(ID_SERVO4);
@@ -50,7 +50,7 @@ int main(void)
     herkulex_led_green(ID_SERVO4);
     herkulex_led_cyan(ID_SERVOFD);
 
-    my_printf("Systeme pret (Mode DMA Standard).\r\n");
+    my_printf("Systeme pret.\r\n");
 
     while (1)
     {
@@ -330,4 +330,5 @@ static void SystemClock_Config()
 	// Update SystemCoreClock global variable
 	SystemCoreClockUpdate();
 }
+
 
