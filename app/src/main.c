@@ -57,17 +57,16 @@ int main(void)
         position1 = (adc_dma_buffer[0] * 1023) / 4095;
         position2 = (adc_dma_buffer[1] * 1023) / 4095;
 
-        // 2. Debug Console
+        //Debug Console
         my_printf("--- Cycle ---\r\n");
         my_printf("ADC: [%d, %d] -> POS: [%d, %d]\r\n",
                   adc_dma_buffer[0], adc_dma_buffer[1],
                   position1, position2);
 
-        // 3. Commande Servos (Appel simple à 3 arguments)
+        //Commande Servos
         herkulex_set_position(ID_SERVO4, position1, 60);
         herkulex_set_position(ID_SERVOFD, position2, 60);
-
-        // 4. Délai (toujours nécessaire pour l'affichage et l'UART)
+		
         for (delay = 0; delay < 500000; delay++);
     }
 }
@@ -330,5 +329,6 @@ static void SystemClock_Config()
 	// Update SystemCoreClock global variable
 	SystemCoreClockUpdate();
 }
+
 
 
