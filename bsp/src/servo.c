@@ -53,12 +53,15 @@ void uart_send_byte(uint8_t data)
 	USART1->TDR = data;
 }
 
-void uart_read_byte(uint8_t data)
+uint8_t uart_receive_byte(void)
 {
-	while (!(USART2->ISR & USART_ISR_TXE));
-	USART2->TDR = data;
-	my_printf("0x%X\t",data);
+    //On attend que le drapeau RXNE 1
+    while (!(USART1->ISR & USART_ISR_RXNE));
+
+    // On LIT le registre RDR (Receive Data Register)
+    return (uint8_t)(USART1->RDR); 
 }
+
 
 void herkulex_ram_write(uint8_t servo_id, uint8_t address, uint8_t length, uint8_t *data)
 {
@@ -229,6 +232,7 @@ void herkulex_set_position(uint8_t servo_id, uint16_t position, uint32_t playtim
         uart_send_byte(packet[j]);
     }
 }
+
 
 
 
