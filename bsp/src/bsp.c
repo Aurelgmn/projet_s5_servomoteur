@@ -189,29 +189,58 @@ void BSP_Console_Init()
 	USART2->CR1 |= USART_CR1_UE;
 }
 
-void BSP_ADC_Init(void)
-{
-    // ... (Activation des horloges et GPIO restent identiques) ...
-    RCC->AHBENR |= RCC_AHBENR_GPIOCEN;
-    RCC->APB2ENR |= RCC_APB2ENR_ADC1EN;
-
-    GPIOC->MODER |= (0x03 << GPIO_MODER_MODER0_Pos) | (0x03 << GPIO_MODER_MODER1_Pos);
-
-    // Reset complet
-    ADC1->CR = 0;
-    ADC1->CFGR1 = 0;
-    ADC1->CHSELR = 0;
-
-    // Calibration
-    ADC1->CR |= ADC_CR_ADCAL;
-    while(ADC1->CR & ADC_CR_ADCAL);
-
-    // Activer l'ADC
-    ADC1->CR |= ADC_CR_ADEN;
-    while(!(ADC1->ISR & ADC_ISR_ADRDY));
-
-    ADC1->SMPR = 0x07; // Maximum sampling time (ex: 239.5 cycles) pour éviter le crosstalk
+extern uint16_t adc_dma_buffer[];
+void BSP_ADC_DMA_Init() {
+	// Enable GPIOC clock
+	RCC->AHBENR |= RCC_AHBENR_GPIOCEN;
+	// Configure pin PC0 and PC1 as analog
+	GPIOC->MODER &= ~(GPIO_MODER_MODER0_Msk | GPIO_MODER_MODER1_Msk);
+	GPIOC->MODER |= (0x03 << GPIO_MODER_MODER0_Pos)
+			| (0x03 << GPIO_MODER_MODER1_Pos);
+	// Enable ADC clock
+	RCC->APB2ENR |= RCC_APB2ENR_ADC1EN;
+	// Reset ADC configuration
+	ADC1->CR = 0x00000000;
+	ADC1->CFGR1 = 0x00000000;
+	ADC1->CFGR2 = 0x00000000;
+	ADC1->CHSELR = 0x00000000;
+	// Enable continuous conversion mode
+	ADC1->CFGR1 |= ADC_CFGR1_CONT;
+	// 12-bit resolution
+	ADC1->CFGR1 |= (0x00 << ADC_CFGR1_RES_Pos);
+	// Select PCLK/2 as ADC clock
+	ADC1->CFGR2 |= (0x01 << ADC_CFGR2_CKMODE_Pos);
+	// Set sampling time to 239.5 ADC clock cycles environ 10 mico secondes
+	ADC1->SMPR = 0x07;
+	// Select channel 10 and 11 (Correspondant à PC0 et PC1)
+	ADC1->CHSELR |= ADC_CHSELR_CHSEL10 | ADC_CHSELR_CHSEL11;
+	// Start DMA clock
+	RCC->AHBENR |= RCC_AHBENR_DMA1EN;
+	// Reset DMA1 Channel 1 configuration
+	DMA1_Channel1->CCR = 0x00000000;
+	// Configure DMA1 Channel 1
+	// Peripheral -> Memory
+	// Peripheral is 16-bit, no increment
+	// Memory is 16-bit, increment
+	// Circular mode
+	DMA1_Channel1->CCR |= (0x01 << DMA_CCR_PSIZE_Pos)
+			| (0x01 << DMA_CCR_MSIZE_Pos) | DMA_CCR_MINC | DMA_CCR_CIRC;
+	// Peripheral is ADC1 DR
+	DMA1_Channel1->CPAR = (uint32_t) &ADC1->DR;
+	// Memory is adc_dma_buffer
+	DMA1_Channel1->CMAR = (uint32_t) adc_dma_buffer;
+	// Set Memory Buffer size
+	DMA1_Channel1->CNDTR = 2;
+	// Enable DMA1 Channel 1
+	DMA1_Channel1->CCR |= DMA_CCR_EN;
+	// Enable ADC DMA Request in circular mode
+	ADC1->CFGR1 |= ADC_CFGR1_DMACFG | ADC_CFGR1_DMAEN;
+	// Enable ADC
+	ADC1->CR |= ADC_CR_ADEN;
+	// Start conversion
+	ADC1->CR |= ADC_CR_ADSTART;
 }
+
 
 //void BSP_ADC_Init_1()
 //{
@@ -254,5 +283,6 @@ void BSP_ADC_Init(void)
 //	// Start conversion
 //	ADC1->CR |= ADC_CR_ADSTART;
 //}
+
 
 
