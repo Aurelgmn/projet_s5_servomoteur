@@ -46,7 +46,7 @@ int main(void)
     herkulex_torque_on(ID_SERVO4);
     herkulex_torque_on(ID_SERVOFD);
 
-    // LEDs initiales (Juste pour le style au démarrage)
+    // LEDs initiales 
     herkulex_led_green(ID_SERVO4);
     herkulex_led_cyan(ID_SERVOFD);
 
@@ -329,6 +329,7 @@ static void SystemClock_Config()
 	// Update SystemCoreClock global variable
 	SystemCoreClockUpdate();
 }
+
 
 
 
