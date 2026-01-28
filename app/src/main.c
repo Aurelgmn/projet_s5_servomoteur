@@ -19,62 +19,115 @@
 // Static functions
 static void SystemClock_Config(void);
 
+#include "main.h"
+#include "stm32f0xx.h"
+#include "bsp.h"
+#include "servo.h"
+
+#define ID_SERVO4 0x04
+#define ID_SERVOFD 0xFD
+
+static void SystemClock_Config();
+// Buffer DMA
+uint16_t adc_dma_buffer[2];
+
 int main(void)
 {
-	uint16_t adc_values[2];
-	uint32_t position1, position2;
-	volatile uint32_t delay;
+    uint32_t position1, position2;
+    volatile uint32_t delay;
 
-	// Setup clocks
-	SystemClock_Config();
+    // Initialisations
+    SystemClock_Config();
+    servo_uart_init();
+    BSP_Console_Init();
+    BSP_ADC_DMA_Init(); // Ton init DMA "Style Prof"
 
-	// UART / Console
-	servo_uart_init();
-	BSP_Console_Init();
-	my_printf("Console ready!\r\n");
+    // Allumage initial
+    herkulex_torque_on(ID_SERVO4);
+    herkulex_torque_on(ID_SERVOFD);
 
-	// ADC avec 2 canaux
-	BSP_ADC_Init();
-	my_printf("ADC ready (2 channels)!\r\n");
+    // LEDs initiales (Juste pour le style au démarrage)
+    herkulex_led_green(ID_SERVO4);
+    herkulex_led_cyan(ID_SERVOFD);
 
-	// __Servos__ ON
-	herkulex_torque_on(ID_SERVO4);
-	herkulex_torque_on(ID_SERVOFD);
+    my_printf("Systeme pret (Mode DMA Standard).\r\n");
 
-	herkulex_led_green(ID_SERVO4);
-	herkulex_led_cyan(ID_SERVOFD);
+    while (1)
+    {
+        position1 = (adc_dma_buffer[0] * 1023) / 4095;
+        position2 = (adc_dma_buffer[1] * 1023) / 4095;
 
-	while (1)
-	{
-		/* ===== Lecture Potentiomètre 1 (Canal 10) ===== */
-		ADC1->CHSELR = ADC_CHSELR_CHSEL10;       // Sélectionner SEULEMENT canal 10
-		ADC1->CR |= ADC_CR_ADSTART;              // Lancer la conversion
-		while (!(ADC1->ISR & ADC_ISR_EOC));      // Attendre la fin
-		adc_values[0] = ADC1->DR;                // Lire le résultat
+        // 2. Debug Console
+        my_printf("--- Cycle ---\r\n");
+        my_printf("ADC: [%d, %d] -> POS: [%d, %d]\r\n",
+                  adc_dma_buffer[0], adc_dma_buffer[1],
+                  position1, position2);
 
-		/* ===== Lecture Potentiomètre 2 (Canal 11) ===== */
-		ADC1->CHSELR = ADC_CHSELR_CHSEL11;       // Sélectionner SEULEMENT canal 11
-		ADC1->CR |= ADC_CR_ADSTART;              // Lancer la conversion
-		while (!(ADC1->ISR & ADC_ISR_EOC));      // Attendre la fin
-		adc_values[1] = ADC1->DR;                // Lire le résultat
+        // 3. Commande Servos (Appel simple à 3 arguments)
+        herkulex_set_position(ID_SERVO4, position1, 60);
+        herkulex_set_position(ID_SERVOFD, position2, 60);
 
-		/* ===== Commande des Servos ===== */
-		// Servo 1 (ID 4)
-		position1 = (adc_values[0] * 1023) / 4095;
-		// Filtrage simple : si la valeur bouge peu, on n'envoie pas pour éviter de surcharger le bus
-		herkulex_set_position(ID_SERVO4, position1, 60); // 60 = temps de déplacement (PlayTime)
-
-		// Servo 2 (ID 253/FD)
-		position2 = (adc_values[1] * 1023) / 4095;
-		herkulex_set_position(ID_SERVOFD, position2, 60);
-
-		// Debug
-		my_printf("Servo4 -> %d | ServoFD -> %d\r\n", adc_values[0], adc_values[1]);
-
-		// Petit délai pour ne pas saturer le port série et les servos
-		for (delay = 0; delay < 100000; delay++);
-	}
+        // 4. Délai (toujours nécessaire pour l'affichage et l'UART)
+        for (delay = 0; delay < 500000; delay++);
+    }
 }
+
+// int main(void)
+// {
+// 	uint16_t adc_values[2];
+// 	uint32_t position1, position2;
+// 	volatile uint32_t delay;
+
+// 	// Setup clocks
+// 	SystemClock_Config();
+
+// 	// UART / Console
+// 	servo_uart_init();
+// 	BSP_Console_Init();
+// 	my_printf("Console ready!\r\n");
+
+// 	// ADC avec 2 canaux
+// 	BSP_ADC_Init();
+// 	my_printf("ADC ready (2 channels)!\r\n");
+
+// 	// __Servos__ ON
+// 	herkulex_torque_on(ID_SERVO4);
+// 	herkulex_torque_on(ID_SERVOFD);
+
+// 	herkulex_led_green(ID_SERVO4);
+// 	herkulex_led_cyan(ID_SERVOFD);
+
+// 	while (1)
+// 	{
+// 		/* ===== Lecture Potentiomètre 1 (Canal 10) ===== */
+// 		ADC1->CHSELR = ADC_CHSELR_CHSEL10;       // Sélectionner SEULEMENT canal 10
+// 		ADC1->CR |= ADC_CR_ADSTART;              // Lancer la conversion
+// 		while (!(ADC1->ISR & ADC_ISR_EOC));      // Attendre la fin
+// 		adc_values[0] = ADC1->DR;                // Lire le résultat
+
+// 		/* ===== Lecture Potentiomètre 2 (Canal 11) ===== */
+// 		ADC1->CHSELR = ADC_CHSELR_CHSEL11;       // Sélectionner SEULEMENT canal 11
+// 		ADC1->CR |= ADC_CR_ADSTART;              // Lancer la conversion
+// 		while (!(ADC1->ISR & ADC_ISR_EOC));      // Attendre la fin
+// 		adc_values[1] = ADC1->DR;                // Lire le résultat
+
+// 		/* ===== Commande des Servos ===== */
+// 		// Servo 1 (ID 4)
+// 		position1 = (adc_values[0] * 1023) / 4095;
+// 		// Filtrage simple : si la valeur bouge peu, on n'envoie pas pour éviter de surcharger le bus
+// 		herkulex_set_position(ID_SERVO4, position1, 60); // 60 = temps de déplacement (PlayTime)
+
+// 		// Servo 2 (ID 253/FD)
+// 		position2 = (adc_values[1] * 1023) / 4095;
+// 		herkulex_set_position(ID_SERVOFD, position2, 60);
+
+// 		// Debug
+// 		my_printf("Servo4 -> %d | ServoFD -> %d\r\n", adc_values[0], adc_values[1]);
+
+// 		// Petit délai pour ne pas saturer le port série et les servos
+// 		for (delay = 0; delay < 100000; delay++);
+// 	}
+// }
 
 //int main(void)
 //{
@@ -277,3 +330,4 @@ static void SystemClock_Config()
 	// Update SystemCoreClock global variable
 	SystemCoreClockUpdate();
 }
+
